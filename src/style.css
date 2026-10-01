@@ -1,0 +1,106 @@
+:root {
+  --bg: #12151b;
+  --card: #1a1f27;
+  --border: #2a313c;
+  --border-strong: #46505f;
+  --text: #e6e9ef;
+  --muted: #8b93a1;
+  --accent: #6ea8ff;
+  --accent-bg: rgba(110, 168, 255, 0.14);
+  --up: #f04747;
+  --down: #2fb35a;
+  --flat: #9aa0a6;
+  color-scheme: dark;
+  font-family: "Segoe UI", "Microsoft JhengHei UI", "Microsoft JhengHei", system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+}
+:root[data-theme="light"] {
+  --bg: #f4f6f9;
+  --card: #ffffff;
+  --border: #dde2ea;
+  --border-strong: #b8c0cc;
+  --text: #1c2330;
+  --muted: #6b7482;
+  --accent: #2563eb;
+  --accent-bg: rgba(37, 99, 235, 0.1);
+  --up: #d32f2f;
+  --down: #1b873f;
+  --flat: #7a8088;
+  color-scheme: light;
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  overflow: hidden;
+}
+button {
+  font: inherit;
+}
+button.ghost {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+button.ghost:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+button.icon {
+  padding: 2px 5px;
+}
+button.primary {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+.dialog {
+  width: min(340px, calc(100vw - 32px));
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.dialog h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.dialog p {
+  margin: 0;
+  font-size: 13px;
+}
+.dialog .row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
