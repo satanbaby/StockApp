@@ -1,4 +1,4 @@
-# 即時台股（Tauri + Vue 3 + TypeScript）
+# StockApp 即時台股（Tauri + Vue 3 + TypeScript）
 
 Windows System Tray 即時看盤小工具，資料來源 Fugle MarketData API v1.0。
 

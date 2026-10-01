@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "即時台股",
+  "productName": "StockApp",
   "version": "../package.json",
   "identifier": "tw.personal.stockapp",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "即時台股",
+        "title": "StockApp",
         "width": 400,
         "height": 760,
         "resizable": false,
