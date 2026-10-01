@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { isMac, keyLabel } from "../utils/platform";
 
 const props = defineProps<{ modelValue: string }>();
 const emit = defineEmits<{ (e: "record", accelerator: string): void }>();
@@ -71,7 +72,7 @@ function onKeydown(e: KeyboardEvent) {
     return;
   }
   if (MODIFIER_KEYS.has(e.key)) {
-    preview.value = mods.join("+") + "+…";
+    preview.value = mods.map(keyLabel).join("+") + "+…";
     return;
   }
   const key = keyName(e.code);
@@ -81,7 +82,7 @@ function onKeydown(e: KeyboardEvent) {
   }
   // Plain keys would hijack normal typing everywhere; F-keys are the exception.
   if (mods.length === 0 && !/^F\d+$/.test(key)) {
-    preview.value = "請搭配 Ctrl / Alt / Shift / Win";
+    preview.value = isMac ? "請搭配 ⌘ / ⌥ / ⌃ / ⇧" : "請搭配 Ctrl / Alt / Shift / Win";
     return;
   }
   stop();
@@ -101,7 +102,7 @@ function onKeydown(e: KeyboardEvent) {
     >
       <template v-if="recording">{{ preview || "請按下組合鍵…（Esc 取消）" }}</template>
       <template v-else-if="props.modelValue">
-        <kbd v-for="k in props.modelValue.split('+')" :key="k">{{ k }}</kbd>
+        <kbd v-for="k in props.modelValue.split('+')" :key="k">{{ keyLabel(k) }}</kbd>
       </template>
       <span v-else class="off">未設定</span>
     </button>

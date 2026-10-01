@@ -32,8 +32,9 @@ fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(MAIN_WINDOW)
 }
 
-/// Place the panel above the taskbar, horizontally centred on the tray icon
-/// and clamped inside the monitor's work area.
+/// Place the panel next to the tray icon, horizontally centred on it and clamped
+/// inside the monitor's work area: above a bottom taskbar (Windows) or below a
+/// top menu bar (macOS), depending on which half of the screen the icon is in.
 fn position_panel(app: &AppHandle, window: &WebviewWindow) {
     let anchor = app.state::<Mutex<PanelState>>().lock().unwrap().last_anchor;
     let monitor = match anchor {
@@ -51,7 +52,13 @@ fn position_panel(app: &AppHandle, window: &WebviewWindow) {
         Some(p) => (p.x as i32 - w / 2).clamp(left, right.max(left)),
         None => right,
     };
-    let y = area.position.y + area.size.height as i32 - PANEL_MARGIN - h;
+    let top = area.position.y + PANEL_MARGIN;
+    let bottom = area.position.y + area.size.height as i32 - PANEL_MARGIN - h;
+    let anchored_at_top = match anchor {
+        Some(p) => (p.y as i32) < area.position.y + area.size.height as i32 / 2,
+        None => cfg!(target_os = "macos"),
+    };
+    let y = if anchored_at_top { top } else { bottom.max(top) };
     let _ = window.set_position(PhysicalPosition::new(x, y));
 }
 
@@ -145,6 +152,16 @@ pub fn run() {
         .manage(Mutex::new(PanelState::default()))
         .invoke_handler(tauri::generate_handler![set_always_on_top, show_panel, hide_panel_cmd, set_global_shortcut])
         .setup(|app| {
+            // Menu-bar app: no Dock icon, no app switcher entry.
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            // macOS menu bars expect a monochrome template icon that the OS recolours.
+            #[cfg(target_os = "macos")]
+            let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))?;
+            #[cfg(not(target_os = "macos"))]
+            let tray_icon = app.default_window_icon().unwrap().clone();
+
             let toggle = MenuItem::with_id(app, "toggle", "顯示 / 隱藏", true, None::<&str>)?;
             let pinned_item = CheckMenuItem::with_id(app, "pin", "📌 釘住面板", true, false, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "離開程式", true, None::<&str>)?;
@@ -154,7 +171,8 @@ pub fn run() {
             app.manage(TrayState { pinned_item: pinned_item.clone() });
 
             TrayIconBuilder::with_id("main-tray")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
+                .icon_as_template(cfg!(target_os = "macos"))
                 .tooltip("StockApp 即時台股")
                 .menu(&menu)
                 .show_menu_on_left_click(false)

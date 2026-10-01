@@ -1,5 +1,6 @@
 import { load, type Store } from "@tauri-apps/plugin-store";
 import type { MaPeriod } from "../indicators/ma";
+import { isMac } from "../utils/platform";
 
 export type ThemeSetting = "system" | "light" | "dark";
 
@@ -18,7 +19,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pinned: [],
   alwaysOnTop: false,
   maVisible: { 5: true, 10: true, 20: true, 60: false },
-  shortcut: "Ctrl+Alt+S",
+  shortcut: isMac ? "Super+Alt+S" : "Ctrl+Alt+S",
   theme: "system",
 };
 

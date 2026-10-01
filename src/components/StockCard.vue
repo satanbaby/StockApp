@@ -46,7 +46,7 @@ function onKey(e: KeyboardEvent) {
   } else if (e.key === "Enter" && props.kind === "dynamic") {
     store.pinDynamic();
     e.preventDefault();
-  } else if (e.key === "Delete" && props.kind === "pinned") {
+  } else if ((e.key === "Delete" || e.key === "Backspace") && props.kind === "pinned") {
     store.unpin(props.symbol);
     e.preventDefault();
   }

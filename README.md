@@ -1,6 +1,6 @@
 # StockApp 即時台股（Tauri + Vue 3 + TypeScript）
 
-Windows System Tray 即時看盤小工具，資料來源 Fugle MarketData API v1.0。
+Windows System Tray／macOS 選單列即時看盤小工具，資料來源 Fugle MarketData API v1.0。
 
 ## 開發
 
@@ -23,6 +23,15 @@ git push --follow-tags   # 推上 GitHub 後，Actions 自動建置 exe + msi �
 ```
 
 下載：https://github.com/satanbaby/StockApp/releases
+
+### 平台
+
+| 平台 | 安裝檔 | 備註 |
+|---|---|---|
+| Windows 10/11 x64 | `StockApp_*_x64-setup.exe`、`StockApp_*_x64.msi` | 未簽章，SmartScreen 點「其他資訊 → 仍要執行」 |
+| macOS 11+（Universal） | `StockApp_*_universal.dmg` | 未經 Apple 公證，安裝後執行一次 `xattr -dr com.apple.quarantine /Applications/StockApp.app` |
+
+macOS 上面板會從選單列往下彈出、不顯示 Dock 圖示，預設快捷鍵為 `⌘⌥S`。
 
 ### 自動更新
 

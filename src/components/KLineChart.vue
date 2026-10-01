@@ -102,13 +102,18 @@ function onVisibleRangeChange(range: LogicalRange | null) {
 }
 
 /**
- * Plain wheel keeps scrolling the card list; only Ctrl+wheel reaches the chart to zoom.
- * Stopping propagation in the capture phase keeps the event from the chart canvas
- * without cancelling the default page scroll.
+ * Vertical wheel keeps scrolling the card list. The chart only receives
+ * Ctrl+wheel (zoom; also what a trackpad pinch produces) and horizontal
+ * swipes (pan). Stopping propagation in the capture phase keeps the event from
+ * the chart canvas without cancelling the default page scroll.
  */
 function onWheelCapture(e: WheelEvent) {
-  if (!e.ctrlKey) e.stopPropagation();
-  else e.preventDefault(); // Ctrl+wheel would otherwise zoom the whole webview
+  if (e.ctrlKey) {
+    e.preventDefault(); // otherwise Ctrl+wheel zooms the whole webview
+    return;
+  }
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontal swipe → pan
+  e.stopPropagation();
 }
 
 function applyMaVisibility() {
@@ -125,7 +130,7 @@ onMounted(async () => {
   chart = createChart(el.value!, {
     ...baseChartOptions(store.resolvedTheme),
     timeScale: { borderVisible: false, rightOffset: 0, minBarSpacing: 1.5 },
-    handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     handleScale: {
       mouseWheel: true,
       pinch: true,
@@ -186,7 +191,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="wrap" class="wrap" title="拖曳瀏覽・Ctrl+滾輪縮放・雙擊回到最近 30 日">
+  <div ref="wrap" class="wrap" title="拖曳或左右滑動瀏覽・Ctrl+滾輪／雙指縮放・雙擊回到最近 30 日">
     <div ref="el" class="chart"></div>
     <div v-if="loading" class="overlay">載入 K 線…</div>
     <div v-else-if="error" class="overlay error">{{ error }}</div>

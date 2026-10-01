@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { MAX_PINNED, useMarketStore } from "./stores/market";
+import { isMac } from "./utils/platform";
 import TopBar from "./components/TopBar.vue";
 import StockCard from "./components/StockCard.vue";
 import ReplacePinDialog from "./components/ReplacePinDialog.vue";
@@ -113,7 +114,7 @@ onBeforeUnmount(() => {
         常駐 {{ store.pinned.length }} / {{ MAX_PINNED }}・查詢股票後按 Enter 或「📌 釘選」加入
       </div>
     </section>
-    <footer class="keys">打代號查詢・←/→ 圖表・Tab 換股・Enter 釘選・Del 取消釘選・Esc 收起</footer>
+    <footer class="keys">打代號查詢・←/→ 圖表・Tab 換股・Enter 釘選・{{ isMac ? "⌫" : "Del" }} 取消釘選・Esc 收起</footer>
     <ReplacePinDialog />
     <SettingsDialog />
   </main>
