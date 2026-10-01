@@ -24,6 +24,12 @@ git push --follow-tags   # 推上 GitHub 後，Actions 自動建置 exe + msi �
 
 下載：https://github.com/satanbaby/StockApp/releases
 
+### 自動更新
+
+- App 啟動 10 秒後與之後每 6 小時檢查 `releases/latest/download/latest.json`，有新版會在面板頂部顯示「立即更新」；設定畫面也可手動「檢查更新」。
+- 更新包由 CI 用 GitHub Secrets 中的 `TAURI_SIGNING_PRIVATE_KEY` 簽章，App 以 `tauri.conf.json` 裡的 pubkey 驗證。
+- 私鑰備份在本機 `%USERPROFILE%\.tauri\stockapp-updater.key`（不在 repo 中）。**遺失私鑰後，已安裝的 App 將無法再自動更新。**
+
 ## 架構
 
 ```

@@ -7,8 +7,11 @@ import TopBar from "./components/TopBar.vue";
 import StockCard from "./components/StockCard.vue";
 import ReplacePinDialog from "./components/ReplacePinDialog.vue";
 import SettingsDialog from "./components/SettingsDialog.vue";
+import UpdateBanner from "./components/UpdateBanner.vue";
+import { useUpdaterStore } from "./stores/updater";
 
 const store = useMarketStore();
+const updater = useUpdaterStore();
 const emptySlots = computed(() => MAX_PINNED - store.pinned.length);
 let lastFocusedSymbol: string | null = null;
 let unlistenShown: UnlistenFn | null = null;
@@ -89,6 +92,7 @@ onMounted(async () => {
     focusTarget(symbol);
   });
   void store.init();
+  void updater.init();
 });
 
 onBeforeUnmount(() => {
@@ -101,6 +105,7 @@ onBeforeUnmount(() => {
 <template>
   <main class="app">
     <TopBar />
+    <UpdateBanner />
     <section v-if="store.ready" class="list">
       <StockCard v-if="store.dynamic" :key="`d-${store.dynamic}`" :symbol="store.dynamic" kind="dynamic" />
       <StockCard v-for="sym in store.pinned" :key="sym" :symbol="sym" kind="pinned" />

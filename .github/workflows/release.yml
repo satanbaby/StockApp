@@ -55,11 +55,17 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update bundles; the matching public key is in tauri.conf.json.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ env.TAG }}
           releaseName: 即時台股 v__VERSION__
           # GitHub strips non-ASCII characters from asset names, so use an ASCII prefix.
           assetNamePattern: StockApp_[version]_[arch][setup][ext]
+          # latest.json drives the in-app updater; point Windows at the NSIS (.exe) build.
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
           releaseDraft: false
           prerelease: false
           releaseBody: |

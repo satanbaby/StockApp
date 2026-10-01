@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-hide",
@@ -10,7 +12,13 @@
     "store:default",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://api.fugle.tw/*" }]
-    }
+      "allow": [
+        {
+          "url": "https://api.fugle.tw/*"
+        }
+      ]
+    },
+    "updater:default",
+    "process:allow-restart"
   ]
 }

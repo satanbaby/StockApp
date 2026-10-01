@@ -45,6 +45,18 @@
       "wix": {
         "language": "zh-TW"
       }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYyNTlCNzdCMzRDQ0IzQkQKUldTOXM4dzBlN2RaOGdPa3RZbG1uMEZBcHRJdVJJZnhQRjVSZlBwaXpxbVN2OHUwUmxLcGIwc2gK",
+      "endpoints": [
+        "https://github.com/satanbaby/StockApp/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

@@ -3,8 +3,10 @@ import { nextTick, ref, watch } from "vue";
 import { useMarketStore } from "../stores/market";
 import type { ThemeSetting } from "../services/settings";
 import ShortcutRecorder from "./ShortcutRecorder.vue";
+import { useUpdaterStore } from "../stores/updater";
 
 const store = useMarketStore();
+const updater = useUpdaterStore();
 const key = ref(store.apiKey);
 const keyInput = ref<HTMLInputElement>();
 
@@ -79,6 +81,33 @@ function save() {
         </div>
       </section>
 
+      <section>
+        <label>版本</label>
+        <div class="version">
+          <span>目前 v{{ updater.currentVersion }}</span>
+          <button
+            v-if="updater.state === 'available'"
+            type="button"
+            class="primary small"
+            @click="updater.install()"
+          >
+            更新到 v{{ updater.available?.version }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="ghost"
+            :disabled="updater.state === 'checking' || updater.state === 'downloading'"
+            @click="updater.checkNow(true)"
+          >
+            {{ updater.state === "checking" ? "檢查中…" : "檢查更新" }}
+          </button>
+        </div>
+        <p v-if="updater.state === 'up-to-date'" class="help">已是最新版本。</p>
+        <p v-else-if="updater.state === 'downloading'" class="help">下載更新中… {{ updater.progress }}%</p>
+        <p v-else-if="updater.error" class="help error">{{ updater.error }}</p>
+      </section>
+
       <div class="row">
         <button v-if="store.apiKey" type="button" class="ghost" @click="close()">關閉</button>
         <button type="submit" class="primary" :disabled="!key.trim()">儲存</button>
@@ -114,6 +143,16 @@ input:focus {
 }
 .help.error {
   color: var(--up);
+}
+.version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.small {
+  padding: 3px 10px;
+  font-size: 12px;
 }
 .seg {
   display: flex;
