@@ -320,6 +320,11 @@ export const useMarketStore = defineStore("market", () => {
     return service.value.getHistory(symbol);
   }
 
+  function getOlderHistory(symbol: string, before: string): Promise<DailyBar[]> {
+    if (!service.value) return Promise.reject(new Error("service not ready"));
+    return service.value.getOlderHistory(symbol, before);
+  }
+
   return {
     apiKey,
     pinned,
@@ -358,5 +363,6 @@ export const useMarketStore = defineStore("market", () => {
     getIntraday,
     getTodayBar,
     getHistory,
+    getOlderHistory,
   };
 });

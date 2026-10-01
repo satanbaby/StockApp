@@ -53,6 +53,8 @@ export interface MarketListener {
 const TAIPEI_OFFSET_S = 8 * 3600;
 /** ~200 calendar days ≈ 130+ trading days; Fugle limits one query to < 1 year. */
 const HISTORY_CALENDAR_DAYS = 200;
+/** Each "load older" request; Fugle requires the range to be under one year. */
+const OLDER_CHUNK_CALENDAR_DAYS = 360;
 
 export function toChartTime(epochMs: number): ChartTime {
   return Math.floor(epochMs / 1000) + TAIPEI_OFFSET_S;
@@ -143,9 +145,20 @@ export class MarketService {
       const to = taipeiDate();
       const from = addDays(to, -HISTORY_CALENDAR_DAYS);
       const res = await this.rest.getHistoricalCandles(symbol, from, to);
-      return (res.data ?? [])
-        .map((c) => ({ time: c.date.slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close }))
-        .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+      return toDailyBars(res.data ?? []);
+    });
+  }
+
+  /**
+   * One chunk (~1 year) of daily candles strictly before `before` (`yyyy-MM-dd`),
+   * ascending. An empty array means there is no older data. Cached per chunk.
+   */
+  getOlderHistory(symbol: string, before: string): Promise<DailyBar[]> {
+    return this.history.get(`${symbol}@${before}`, async () => {
+      const to = addDays(before, -1);
+      const from = addDays(before, -OLDER_CHUNK_CALENDAR_DAYS);
+      const res = await this.rest.getHistoricalCandles(symbol, from, to);
+      return toDailyBars(res.data ?? []).filter((b) => b.time < before);
     });
   }
 
@@ -184,6 +197,12 @@ export class MarketService {
     // Trades were missed while offline; resync snapshots.
     if (recovered) for (const symbol of this.watch) void this.loadSymbol(symbol);
   }
+}
+
+function toDailyBars(candles: FugleCandle[]): DailyBar[] {
+  return candles
+    .map((c) => ({ time: c.date.slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close }))
+    .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
 }
 
 function buildSnapshot(q: FugleQuote, candles: FugleCandle[]): StockSnapshot {
