@@ -8,10 +8,21 @@ Windows System Tray 即時看盤小工具，資料來源 Fugle MarketData API v1
 npm install
 npm run tauri dev     # 開發模式
 npm test              # 單元測試（均線、WebSocket Manager）
-npm run tauri build   # 產生 NSIS 安裝檔
+npm run tauri build   # 本機打包（一般改用 GitHub Actions 發布）
 ```
 
 首次啟動會要求輸入 Fugle API Key（存在本機 `settings.json`，透過 tauri-plugin-store）。
+
+## 發布新版本
+
+安裝檔由 GitHub Actions（`.github/workflows/release.yml`）建置，不需要在本機打包：
+
+```bash
+npm version 0.1.1        # 更新版本號（tauri.conf.json 會讀取 package.json），自動 commit 並建立 tag v0.1.1
+git push --follow-tags   # 推上 GitHub 後，Actions 自動建置 exe + msi 並發布到 Releases
+```
+
+下載：https://github.com/satanbaby/StockApp/releases
 
 ## 架構
 

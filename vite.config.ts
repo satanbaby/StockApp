@@ -8,6 +8,10 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(() => ({
   plugins: [vue()],
 
+  // dist/ is cleaned by scripts/clean-dist.mjs: Vite's own emptyOutDir crashes
+  // under Node 24.11 when the project path contains non-ASCII characters.
+  build: { emptyOutDir: false },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要建置並發布的 tag（例如 v0.1.0）"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Check tag matches package.json version
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+
+      # WiX (MSI) needs VBScript, which newer Windows images may ship without.
+      - name: Ensure VBScript is installed
+        continue-on-error: true
+        shell: pwsh
+        run: DISM /Online /Add-Capability /CapabilityName:VBSCRIPT~~~~ /NoRestart
+
+      - run: npm ci
+
+      - run: npm test
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ env.TAG }}
+          releaseName: 即時台股 v__VERSION__
+          releaseDraft: false
+          prerelease: false
+          releaseBody: |
+            ## 下載
+
+            | 檔案 | 說明 |
+            |---|---|
+            | `即時台股_*_x64-setup.exe` | 一般使用推薦，裝在使用者目錄，不需要管理員權限 |
+            | `即時台股_*_x64_zh-TW.msi` | 給 IT 部署用，裝在 Program Files，需要管理員權限 |
+
+            安裝檔沒有數位簽章，如果出現 SmartScreen 警告，請點「其他資訊 → 仍要執行」。
