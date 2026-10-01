@@ -58,6 +58,8 @@ jobs:
         with:
           tagName: ${{ env.TAG }}
           releaseName: 即時台股 v__VERSION__
+          # GitHub strips non-ASCII characters from asset names, so use an ASCII prefix.
+          assetNamePattern: StockApp_[version]_[arch][setup][ext]
           releaseDraft: false
           prerelease: false
           releaseBody: |
@@ -65,7 +67,7 @@ jobs:
 
             | 檔案 | 說明 |
             |---|---|
-            | `即時台股_*_x64-setup.exe` | 一般使用推薦，裝在使用者目錄，不需要管理員權限 |
-            | `即時台股_*_x64_zh-TW.msi` | 給 IT 部署用，裝在 Program Files，需要管理員權限 |
+            | `StockApp_*_x64-setup.exe` | 一般使用推薦，裝在使用者目錄，不需要管理員權限 |
+            | `StockApp_*_x64.msi` | 給 IT 部署用，裝在 Program Files，需要管理員權限 |
 
             安裝檔沒有數位簽章，如果出現 SmartScreen 警告，請點「其他資訊 → 仍要執行」。
