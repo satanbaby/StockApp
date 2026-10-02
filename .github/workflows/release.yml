@@ -156,7 +156,10 @@ jobs:
                 asset_id: sig.id,
                 headers: { accept: "application/octet-stream" },
               });
-              return { signature: Buffer.from(res.data).toString("utf8").trim(), url: byName.get(name).browser_download_url };
+              // Not `browser_download_url`: while the release is still a draft that points at a
+              // temporary `untagged-…` path, which 404s once the release is published.
+              const url = `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${process.env.TAG}/${encodeURIComponent(name)}`;
+              return { signature: Buffer.from(res.data).toString("utf8").trim(), url };
             }
             const find = (re) => assets.map((a) => a.name).find((n) => re.test(n) && byName.has(`${n}.sig`));
 
