@@ -10,6 +10,7 @@
   --up: #f04747;
   --down: #2fb35a;
   --flat: #9aa0a6;
+  --surface: var(--bg);
   color-scheme: dark;
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
   font-size: 14px;
@@ -29,6 +30,23 @@
   --down: #1b873f;
   --flat: #7a8088;
   color-scheme: light;
+}
+/* Frosted glass: the window itself is blurred natively (Acrylic / vibrancy);
+   the page only adds a light tint so the blur shows through. Dialogs keep an
+   opaque --surface so forms stay readable. */
+:root[data-glass] {
+  --bg: rgba(18, 21, 27, 0.15);
+  --card: rgba(34, 40, 51, 0.3);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --surface: #1a1f27;
+}
+:root[data-glass][data-theme="light"] {
+  --bg: rgba(244, 246, 249, 0.15);
+  --card: rgba(255, 255, 255, 0.3);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --surface: #ffffff;
 }
 html,
 body {
@@ -78,7 +96,7 @@ button.primary:disabled {
 }
 .dialog {
   width: min(340px, calc(100vw - 32px));
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   padding: 14px 16px;

@@ -49,10 +49,16 @@ export const useMarketStore = defineStore("market", () => {
   const systemDark = ref(darkQuery.matches);
   darkQuery.addEventListener("change", (e) => (systemDark.value = e.matches));
   const resolvedTheme = computed<"light" | "dark">(() =>
-    theme.value === "system" ? (systemDark.value ? "dark" : "light") : theme.value,
+    theme.value === "system" || theme.value === "glass" ? (systemDark.value ? "dark" : "light") : theme.value,
   );
+  const glass = computed(() => theme.value === "glass");
   watchEffect(() => {
-    document.documentElement.dataset.theme = resolvedTheme.value;
+    const root = document.documentElement;
+    root.dataset.theme = resolvedTheme.value;
+    if (glass.value) root.dataset.glass = "";
+    else delete root.dataset.glass;
+    // Native blur behind the (now translucent) page; off for the opaque themes.
+    void invoke("set_glass", { tint: glass.value ? resolvedTheme.value : null }).catch(() => {});
   });
 
   const stocks = reactive<Record<string, StockView>>({});

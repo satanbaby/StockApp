@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    window::EffectsBuilder,
     AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, Wry,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
@@ -122,6 +123,36 @@ fn hide_panel_cmd(app: AppHandle) {
     hide_panel(&app);
 }
 
+/// Frosted-glass theme: `Some("dark" | "light")` turns the native blur on with a
+/// matching tint, `None` turns it off (the page then paints an opaque background).
+#[tauri::command]
+fn set_glass(app: AppHandle, tint: Option<String>) {
+    let Some(window) = main_window(&app) else { return };
+    let effects = tint.map(|tint| glass_effects(tint == "dark"));
+    let _ = window.set_effects(effects);
+}
+
+#[cfg(target_os = "windows")]
+fn glass_effects(dark: bool) -> tauri::utils::config::WindowEffectsConfig {
+    use tauri::window::{Color, Effect};
+    // Acrylic blurs whatever is behind the panel; the tint keeps text readable.
+    // ~30% opaque.
+    let tint = if dark { Color(18, 21, 27, 77) } else { Color(244, 246, 249, 77) };
+    EffectsBuilder::new().effect(Effect::Acrylic).color(tint).build()
+}
+
+#[cfg(target_os = "macos")]
+fn glass_effects(_dark: bool) -> tauri::utils::config::WindowEffectsConfig {
+    use tauri::window::{Effect, EffectState};
+    // Vibrancy follows the system appearance, as the glass theme does.
+    EffectsBuilder::new().effect(Effect::Popover).state(EffectState::Active).build()
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+fn glass_effects(_dark: bool) -> tauri::utils::config::WindowEffectsConfig {
+    EffectsBuilder::new().build()
+}
+
 /// Replace the "show panel" hotkey; `None` disables it.
 #[tauri::command]
 fn set_global_shortcut(app: AppHandle, accelerator: Option<String>) -> Result<(), String> {
@@ -150,7 +181,13 @@ pub fn run() {
                 .build(),
         )
         .manage(Mutex::new(PanelState::default()))
-        .invoke_handler(tauri::generate_handler![set_always_on_top, show_panel, hide_panel_cmd, set_global_shortcut])
+        .invoke_handler(tauri::generate_handler![
+            set_always_on_top,
+            show_panel,
+            hide_panel_cmd,
+            set_global_shortcut,
+            set_glass
+        ])
         .setup(|app| {
             // Menu-bar app: no Dock icon, no app switcher entry.
             #[cfg(target_os = "macos")]

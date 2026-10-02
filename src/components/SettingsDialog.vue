@@ -14,6 +14,7 @@ const THEMES: { value: ThemeSetting; label: string }[] = [
   { value: "system", label: "跟隨系統" },
   { value: "light", label: "☀ 淺色" },
   { value: "dark", label: "🌙 深色" },
+  { value: "glass", label: "毛玻璃" },
 ];
 
 watch(

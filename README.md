@@ -65,7 +65,7 @@ Market Service (services/marketService.ts)   ← 不依賴 Vue
 
 - **Fugle API Key**
 - **叫出面板快捷鍵**：預設 `Ctrl+Alt+S`，點欄位後直接按下想要的組合鍵即可（需含 Ctrl / Alt / Shift / Win，F1～F12 除外）；被其他程式佔用時會顯示錯誤並保留舊設定。
-- **主題**：跟隨系統 / 淺色 / 深色；標題列的 ☀/🌙 可快速切換。
+- **主題**：跟隨系統 / 淺色 / 深色 / 毛玻璃（Windows Acrylic、macOS vibrancy，約 30% 不透明，深淺跟隨系統）；標題列的主題按鈕依序輪流切換 ☀ 淺色 → 🌙 深色 → ◐ 毛玻璃。
 
 ## 鍵盤操作
 

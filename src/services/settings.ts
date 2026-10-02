@@ -2,7 +2,8 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import type { MaPeriod } from "../indicators/ma";
 import { isMac } from "../utils/platform";
 
-export type ThemeSetting = "system" | "light" | "dark";
+/** `glass`: translucent frosted-glass panel; light / dark follows the system. */
+export type ThemeSetting = "system" | "light" | "dark" | "glass";
 
 export interface AppSettings {
   apiKey: string;

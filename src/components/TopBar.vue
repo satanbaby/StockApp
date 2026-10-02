@@ -18,6 +18,19 @@ const statusText = computed(
     })[store.status],
 );
 
+/** Title-bar theme button: light → dark → glass → light. "System" joins the cycle at what it currently shows. */
+const THEME_CYCLE = [
+  { value: "light", icon: "☀", label: "淺色" },
+  { value: "dark", icon: "🌙", label: "深色" },
+  { value: "glass", icon: "◐", label: "毛玻璃" },
+] as const;
+const themeIndex = computed(() => {
+  const current = store.theme === "system" ? store.resolvedTheme : store.theme;
+  return THEME_CYCLE.findIndex((t) => t.value === current);
+});
+const currentTheme = computed(() => THEME_CYCLE[themeIndex.value]);
+const nextTheme = computed(() => THEME_CYCLE[(themeIndex.value + 1) % THEME_CYCLE.length]);
+
 function submit() {
   if (!input.value.trim()) return;
   if (store.setDynamic(input.value)) input.value = "";
@@ -41,10 +54,10 @@ function submit() {
     <button
       class="ghost icon theme"
       tabindex="-1"
-      :title="store.resolvedTheme === 'dark' ? '切換為淺色' : '切換為深色'"
-      @click="store.setTheme(store.resolvedTheme === 'dark' ? 'light' : 'dark')"
+      :title="`主題：${currentTheme.label}・點一下切換為${nextTheme.label}`"
+      @click="store.setTheme(nextTheme.value)"
     >
-      {{ store.resolvedTheme === "dark" ? "☀" : "🌙" }}
+      {{ currentTheme.icon }}
     </button>
     <button class="ghost icon" tabindex="-1" title="設定" @click="store.settingsOpen = true">⚙</button>
     <button class="ghost icon" tabindex="-1" title="收起 (Esc)" @click="invoke('hide_panel_cmd')">✕</button>
