@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useMarketStore, type ChartMode } from "../stores/market";
+import DepthPanel from "./DepthPanel.vue";
 import IntradayChart from "./IntradayChart.vue";
 import KLineChart from "./KLineChart.vue";
 import MaToggles from "./MaToggles.vue";
@@ -38,10 +39,10 @@ function setMode(m: ChartMode) {
 function onKey(e: KeyboardEvent) {
   if (e.target !== e.currentTarget) return; // ignore keys on inner controls
   if (e.key === "ArrowLeft") {
-    setMode("intraday");
+    store.cycleChartMode(props.symbol, -1);
     e.preventDefault();
   } else if (e.key === "ArrowRight") {
-    setMode("kline");
+    store.cycleChartMode(props.symbol, 1);
     e.preventDefault();
   } else if (e.key === "Enter" && props.kind === "dynamic") {
     store.pinDynamic();
@@ -87,11 +88,14 @@ function onKey(e: KeyboardEvent) {
           :revision="stock.revision"
           :reference-price="stock.referencePrice"
         />
-        <KLineChart v-else :symbol="symbol" :revision="stock.revision" />
+        <KLineChart v-else-if="mode === 'kline'" :symbol="symbol" :revision="stock.revision" />
+        <DepthPanel v-else-if="mode === 'chips'" :depth="stock.depth" :reference-price="stock.referencePrice" />
+        <!-- MA legend overlays the K-line's top-left corner. -->
+        <MaToggles v-if="mode === 'kline'" class="legend" />
       </template>
-      <div class="hint">
-        <span :class="{ on: mode === 'intraday' }">← 即時走勢</span>
-        <span :class="{ on: mode === 'kline' }">30 日 K 線 →</span>
+      <div v-if="mode !== 'chips'" class="hint">
+        <span>{{ mode === "kline" ? "← 即時走勢" : "" }}</span>
+        <span>{{ mode === "intraday" ? "30 日 K 線 →" : "盤中籌碼 →" }}</span>
       </div>
     </div>
 
@@ -99,8 +103,8 @@ function onKey(e: KeyboardEvent) {
       <div class="seg">
         <button tabindex="-1" :class="{ active: mode === 'intraday' }" @click="setMode('intraday')">即時走勢</button>
         <button tabindex="-1" :class="{ active: mode === 'kline' }" @click="setMode('kline')">30 日 K 線</button>
+        <button tabindex="-1" :class="{ active: mode === 'chips' }" @click="setMode('chips')">盤中籌碼</button>
       </div>
-      <MaToggles v-if="mode === 'kline'" />
       <span class="time">{{ updatedText }}</span>
     </footer>
   </article>
@@ -202,6 +206,12 @@ function onKey(e: KeyboardEvent) {
 .state.error {
   color: var(--up);
 }
+.legend {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
 .hint {
   position: absolute;
   inset: auto 0 0 0;
@@ -213,9 +223,6 @@ function onKey(e: KeyboardEvent) {
   opacity: 0;
   transition: opacity 0.15s;
   padding: 0 2px;
-}
-.hint .on {
-  color: var(--accent);
 }
 .card:hover .hint,
 .card:focus-visible .hint,
@@ -241,6 +248,7 @@ function onKey(e: KeyboardEvent) {
   color: var(--muted);
   padding: 2px 7px;
   font-size: 11px;
+  white-space: nowrap;
   cursor: pointer;
 }
 .seg button.active {

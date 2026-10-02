@@ -44,11 +44,11 @@ function ackAll(sock: FakeSocket, ids: Map<string, string>) {
     if (m.event === "subscribe") {
       const id = `ch${++idSeq}`;
       ids.set(id, m.data.symbol);
-      sock.receive({ event: "subscribed", data: { id, channel: "trades", symbol: m.data.symbol } });
+      sock.receive({ event: "subscribed", data: { id, channel: m.data.channel, symbol: m.data.symbol } });
     } else if (m.event === "unsubscribe") {
       const symbol = ids.get(m.data.id);
       ids.delete(m.data.id);
-      sock.receive({ event: "unsubscribed", data: { id: m.data.id, channel: "trades", symbol } });
+      sock.receive({ event: "unsubscribed", data: { id: m.data.id, symbol } });
     }
   }
 }
@@ -120,5 +120,37 @@ describe("WsManager", () => {
     mgr.addListener({ onTrade });
     sock.receive({ event: "data", channel: "trades", id: "x", data: { symbol: "2330", price: 1000, time: 1 } });
     expect(onTrade).toHaveBeenCalledWith(expect.objectContaining({ symbol: "2330", price: 1000 }));
+  });
+
+  it("switching a symbol's channel unsubscribes first and never exceeds 5", () => {
+    const { mgr, sock, ids } = setup();
+    mgr.setWanted(["1101", "2330", "2317", "2454", "0050"]);
+    ackAll(sock, ids);
+
+    mgr.setChannel("2330", "aggregates");
+    const sent = sock.takeSent();
+    expect(sent).toEqual([{ event: "unsubscribe", data: { id: expect.any(String) } }]);
+    expect(mgr.serverSubscriptionCount).toBe(5);
+
+    sock.sent = sent;
+    ackAll(sock, ids);
+    expect(sock.sent).toEqual([{ event: "subscribe", data: { channel: "aggregates", symbol: "2330" } }]);
+    ackAll(sock, ids);
+    expect(mgr.serverSubscriptionCount).toBe(5);
+    expect(ids.size).toBe(5);
+
+    // A bare symbol list keeps the channel already chosen.
+    mgr.setWanted(["1101", "2330", "2317", "2454"]);
+    const next = sock.takeSent();
+    expect(next.map((m) => m.event)).toEqual(["unsubscribe"]);
+    expect(mgr.channelOf("2330")).toBe("aggregates");
+  });
+
+  it("emits aggregates", () => {
+    const { mgr, sock } = setup();
+    const onAggregate = vi.fn();
+    mgr.addListener({ onAggregate });
+    sock.receive({ event: "data", channel: "aggregates", id: "x", data: { symbol: "2330", lastPrice: 1000, bids: [] } });
+    expect(onAggregate).toHaveBeenCalledWith(expect.objectContaining({ symbol: "2330", lastPrice: 1000 }));
   });
 });

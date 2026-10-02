@@ -18,6 +18,28 @@ export interface DailyBar {
   high: number;
   low: number;
   close: number;
+  /** Lots (張). */
+  volume: number;
+}
+
+export interface DepthLevel {
+  price: number;
+  /** Lots (張). */
+  size: number;
+}
+
+/** Order book + cumulative bid/ask volume, shown in the order-book view. */
+export interface Depth {
+  /** Best bids, highest price first. */
+  bids: DepthLevel[];
+  /** Best asks, lowest price first. */
+  asks: DepthLevel[];
+  /** Cumulative volume traded at the bid (內盤), lots. */
+  atBid: number;
+  /** Cumulative volume traded at the ask (外盤), lots. */
+  atAsk: number;
+  /** Epoch milliseconds. */
+  updated: number | null;
 }
 
 export interface StockSnapshot {
@@ -32,6 +54,7 @@ export interface StockSnapshot {
   lastUpdated: number | null;
   intraday: IntradayPoint[];
   today: DailyBar | null;
+  depth: Depth | null;
 }
 
 export interface TradeUpdate {
@@ -46,6 +69,7 @@ export interface TradeUpdate {
 export interface MarketListener {
   onSnapshot(symbol: string, snapshot: StockSnapshot): void;
   onTrade(symbol: string, update: TradeUpdate): void;
+  onDepth(symbol: string, depth: Depth): void;
   onError(symbol: string, message: string): void;
   onStatus(status: ConnectionStatus): void;
 }
@@ -92,6 +116,7 @@ export class MarketService {
     });
     this.ws.addListener({
       onTrade: (t) => this.handleTrade(t),
+      onAggregate: (q) => this.handleAggregate(q),
       onStatus: (s) => this.handleStatus(s),
       onSubscribeError: (symbol, msg) => this.listener.onError(symbol, msg),
     });
@@ -139,6 +164,29 @@ export class MarketService {
     }
   }
 
+  /**
+   * The order-book view streams `aggregates` (full quote incl. order book)
+   * instead of `trades`, so each symbol still uses a single subscription.
+   */
+  setDepthView(symbol: string, on: boolean): void {
+    if (!this.watch.has(symbol)) return;
+    this.ws.setChannel(symbol, on ? "aggregates" : "trades");
+    if (on) void this.refreshDepth(symbol);
+  }
+
+  /** One REST quote so the book shows before the first push (or after the close). */
+  private async refreshDepth(symbol: string): Promise<void> {
+    try {
+      const depth = toDepth(await this.rest.getQuote(symbol));
+      const snap = this.state.get(symbol);
+      if (!depth || !snap) return;
+      snap.depth = depth;
+      this.listener.onDepth(symbol, depth);
+    } catch {
+      /* the stream will fill it in */
+    }
+  }
+
   /** Daily candles (ascending), cached per trading day. */
   getHistory(symbol: string): Promise<DailyBar[]> {
     return this.history.get(symbol, async () => {
@@ -173,7 +221,28 @@ export class MarketService {
       return;
     }
 
-    const price = trade.price;
+    this.applyPrice(snap, trade.price, ms, trade.volume);
+  }
+
+  private handleAggregate(q: FugleQuote): void {
+    const snap = this.state.get(q.symbol);
+    if (!snap) return;
+    if (q.date && q.date !== snap.date) {
+      void this.loadSymbol(q.symbol);
+      return;
+    }
+    const depth = toDepth(q);
+    if (depth) {
+      snap.depth = depth;
+      this.listener.onDepth(q.symbol, depth);
+    }
+    // Keep price, intraday line and today's bar moving while trades are not streamed.
+    const price = q.lastPrice ?? q.lastTrade?.price;
+    const micros = q.lastTrade?.time ?? q.lastUpdated;
+    if (price != null && micros) this.applyPrice(snap, price, Math.floor(micros / 1000), q.total?.tradeVolume);
+  }
+
+  private applyPrice(snap: StockSnapshot, price: number, ms: number, volume?: number): void {
     const change = round2(price - snap.referencePrice);
     const changePercent = snap.referencePrice ? round2((change / snap.referencePrice) * 100) : 0;
     const point = { time: minuteBucket(ms), value: price };
@@ -182,12 +251,19 @@ export class MarketService {
     if (last && last.time === point.time) last.value = price;
     else if (!last || point.time > last.time) snap.intraday.push(point);
 
+    const vol = volume ?? snap.today?.volume ?? 0;
     const today: DailyBar = snap.today
-      ? { ...snap.today, high: Math.max(snap.today.high, price), low: Math.min(snap.today.low, price), close: price }
-      : { time: snap.date, open: price, high: price, low: price, close: price };
+      ? {
+          ...snap.today,
+          high: Math.max(snap.today.high, price),
+          low: Math.min(snap.today.low, price),
+          close: price,
+          volume: vol,
+        }
+      : { time: snap.date, open: price, high: price, low: price, close: price, volume: vol };
 
     Object.assign(snap, { price, change, changePercent, lastUpdated: ms, today });
-    this.listener.onTrade(trade.symbol, { price, change, changePercent, lastUpdated: ms, point, today });
+    this.listener.onTrade(snap.symbol, { price, change, changePercent, lastUpdated: ms, point, today });
   }
 
   private handleStatus(status: ConnectionStatus): void {
@@ -201,7 +277,15 @@ export class MarketService {
 
 function toDailyBars(candles: FugleCandle[]): DailyBar[] {
   return candles
-    .map((c) => ({ time: c.date.slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close }))
+    .map((c) => ({
+      time: c.date.slice(0, 10),
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      // Daily candles report shares; the live quote reports lots.
+      volume: Math.round((c.volume ?? 0) / 1000),
+    }))
     .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
 }
 
@@ -220,6 +304,7 @@ function buildSnapshot(q: FugleQuote, candles: FugleCandle[]): StockSnapshot {
           high: q.highPrice ?? price,
           low: q.lowPrice ?? price,
           close: price,
+          volume: q.total?.tradeVolume ?? 0,
         }
       : null;
 
@@ -234,5 +319,18 @@ function buildSnapshot(q: FugleQuote, candles: FugleCandle[]): StockSnapshot {
     lastUpdated: q.lastUpdated ? Math.floor(q.lastUpdated / 1000) : null,
     intraday,
     today,
+    depth: toDepth(q),
+  };
+}
+
+function toDepth(q: FugleQuote): Depth | null {
+  if (!q.bids && !q.asks && !q.total) return null;
+  const micros = q.lastUpdated ?? q.lastTrade?.time;
+  return {
+    bids: (q.bids ?? []).slice(0, 5),
+    asks: (q.asks ?? []).slice(0, 5),
+    atBid: q.total?.tradeVolumeAtBid ?? 0,
+    atAsk: q.total?.tradeVolumeAtAsk ?? 0,
+    updated: micros ? Math.floor(micros / 1000) : null,
   };
 }

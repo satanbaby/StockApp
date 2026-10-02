@@ -19,6 +19,7 @@ const store = useMarketStore();
   display: flex;
   gap: 6px;
   font-size: 10px;
+  line-height: 14px;
 }
 label {
   display: flex;
@@ -26,11 +27,13 @@ label {
   gap: 2px;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
 }
 input {
   margin: 0;
   width: 11px;
   height: 11px;
   accent-color: currentColor;
+  cursor: pointer;
 }
 </style>

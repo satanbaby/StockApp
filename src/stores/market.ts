@@ -4,12 +4,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { MaPeriod } from "../indicators/ma";
 import type { ConnectionStatus } from "../services/fugle/wsManager";
-import { MarketService, type DailyBar, type IntradayPoint } from "../services/marketService";
+import { MarketService, type DailyBar, type Depth, type IntradayPoint } from "../services/marketService";
 import { DEFAULT_SETTINGS, loadSettings, saveSetting, type ThemeSetting } from "../services/settings";
 
 export const MAX_PINNED = 4;
 
-export type ChartMode = "intraday" | "kline";
+export type ChartMode = "intraday" | "kline" | "chips";
+/** Order of the card views as ←/→ walks through them. */
+export const CHART_MODES: ChartMode[] = ["intraday", "kline", "chips"];
 
 export interface StockView {
   symbol: string;
@@ -19,6 +21,8 @@ export interface StockView {
   change: number | null;
   changePercent: number | null;
   lastUpdated: number | null;
+  /** Order book; only kept fresh while the card is in the "chips" view. */
+  depth: Depth | null;
   /** Bumped on every update so charts know to redraw without deep watching. */
   revision: number;
   loading: boolean;
@@ -74,6 +78,7 @@ export const useMarketStore = defineStore("market", () => {
       change: null,
       changePercent: null,
       lastUpdated: null,
+      depth: null,
       revision: 0,
       loading: true,
       error: null,
@@ -88,6 +93,7 @@ export const useMarketStore = defineStore("market", () => {
     for (const symbol of Object.keys(stocks)) {
       if (!list.includes(symbol)) {
         delete stocks[symbol];
+        delete chartMode[symbol]; // re-added symbols start on the trades channel again
         intraday.delete(symbol);
         todayBars.delete(symbol);
       }
@@ -118,6 +124,7 @@ export const useMarketStore = defineStore("market", () => {
           change: snap.change,
           changePercent: snap.changePercent,
           lastUpdated: snap.lastUpdated,
+          depth: snap.depth,
           loading: false,
           error: null,
         });
@@ -134,6 +141,10 @@ export const useMarketStore = defineStore("market", () => {
           lastUpdated: u.lastUpdated,
         });
         v.revision++;
+      },
+      onDepth(symbol, depth) {
+        const v = stocks[symbol];
+        if (v) v.depth = depth;
       },
       onError(symbol, message) {
         const v = stocks[symbol];
@@ -244,7 +255,18 @@ export const useMarketStore = defineStore("market", () => {
   }
 
   function setChartMode(symbol: string, mode: ChartMode) {
+    const prev = chartMode[symbol];
+    if (prev === mode) return;
     chartMode[symbol] = mode;
+    // The order-book view streams a different channel; swap it so each stock keeps one subscription.
+    if ((prev === "chips") !== (mode === "chips")) service.value?.setDepthView(symbol, mode === "chips");
+  }
+
+  /** ←/→: step through the views, stopping at either end. */
+  function cycleChartMode(symbol: string, dir: 1 | -1) {
+    const i = CHART_MODES.indexOf(chartMode[symbol] ?? "intraday");
+    const next = CHART_MODES[Math.min(CHART_MODES.length - 1, Math.max(0, i + dir))];
+    setChartMode(symbol, next);
   }
 
   function toggleMa(period: MaPeriod) {
@@ -354,6 +376,7 @@ export const useMarketStore = defineStore("market", () => {
     replacePinned,
     unpin,
     setChartMode,
+    cycleChartMode,
     toggleMa,
     setAlwaysOnTop,
     setShortcut,

@@ -1,13 +1,21 @@
-import type { FugleTrade, WsMessage } from "./types";
+import type { FugleQuote, FugleTrade, WsMessage } from "./types";
 
 export const MAX_SUBSCRIPTIONS = 5;
 const WS_URL = "wss://api.fugle.tw/marketdata/v1.0/stock/streaming";
+
+/**
+ * Each symbol occupies exactly one subscription, on one channel: `trades` for
+ * the price / chart views, `aggregates` (full quote incl. order book and
+ * bid/ask volume) for the order-book view.
+ */
+export type Channel = "trades" | "aggregates";
 
 export type ConnectionStatus = "idle" | "connecting" | "authenticating" | "open" | "reconnecting" | "auth-failed";
 
 interface ServerSub {
   /** Channel id assigned by the server once `subscribed` arrives. */
   id?: string;
+  channel: Channel;
   state: "subscribing" | "active" | "unsubscribing";
   timer?: ReturnType<typeof setTimeout>;
 }
@@ -25,6 +33,7 @@ export interface WsManagerOptions {
 
 export interface WsManagerListener {
   onTrade?: (trade: FugleTrade) => void;
+  onAggregate?: (quote: FugleQuote) => void;
   onStatus?: (status: ConnectionStatus) => void;
   onSubscribeError?: (symbol: string, message: string) => void;
 }
@@ -47,7 +56,7 @@ export class WsManager {
 
   private socket: WebSocket | null = null;
   private authenticated = false;
-  private wanted = new Set<string>();
+  private wanted = new Map<string, Channel>();
   private server = new Map<string, ServerSub>();
   private listeners = new Set<WsManagerListener>();
   private status: ConnectionStatus = "idle";
@@ -81,7 +90,11 @@ export class WsManager {
   }
 
   get wantedSymbols(): string[] {
-    return [...this.wanted];
+    return [...this.wanted.keys()];
+  }
+
+  channelOf(symbol: string): Channel | undefined {
+    return this.wanted.get(symbol);
   }
 
   connect(): void {
@@ -106,8 +119,16 @@ export class WsManager {
     this.open();
   }
 
-  setWanted(symbols: Iterable<string>): void {
-    const next = new Set(symbols);
+  /**
+   * Declare the symbols to stream. A bare symbol keeps the channel it already
+   * has (or `trades` when new); a `[symbol, channel]` pair sets it explicitly.
+   */
+  setWanted(symbols: Iterable<string | readonly [string, Channel]>): void {
+    const next = new Map<string, Channel>();
+    for (const item of symbols) {
+      const [symbol, channel] = typeof item === "string" ? [item, this.wanted.get(item) ?? "trades"] : item;
+      next.set(symbol, channel);
+    }
     if (next.size > this.max) {
       throw new Error(`WebSocket subscriptions cannot exceed ${this.max} (got ${next.size})`);
     }
@@ -115,9 +136,16 @@ export class WsManager {
     this.reconcile();
   }
 
+  /** Move a wanted symbol to another channel; the old subscription is dropped first. */
+  setChannel(symbol: string, channel: Channel): void {
+    if (!this.wanted.has(symbol) || this.wanted.get(symbol) === channel) return;
+    this.wanted.set(symbol, channel);
+    this.reconcile();
+  }
+
   subscribe(symbol: string): void {
     if (this.wanted.has(symbol)) return;
-    this.setWanted([...this.wanted, symbol]);
+    this.setWanted([...this.wanted.keys(), symbol]);
   }
 
   unsubscribe(symbol: string): void {
@@ -127,10 +155,9 @@ export class WsManager {
 
   /** Swap the dynamic stock: drop `oldSymbol` (unless still wanted elsewhere) and add `newSymbol`. */
   replace(oldSymbol: string | null, newSymbol: string, keep: Iterable<string> = []): void {
-    const next = new Set(this.wanted);
     const keepSet = new Set(keep);
-    if (oldSymbol && !keepSet.has(oldSymbol)) next.delete(oldSymbol);
-    next.add(newSymbol);
+    const next = [...this.wanted.keys()].filter((s) => s !== oldSymbol || keepSet.has(s));
+    if (!next.includes(newSymbol)) next.push(newSymbol);
     this.setWanted(next);
   }
 
@@ -180,14 +207,16 @@ export class WsManager {
       case "subscribed": {
         const symbol: string | undefined = msg.data?.symbol;
         const id: string | undefined = msg.data?.id;
+        const channel: Channel = msg.data?.channel ?? "trades";
         if (!symbol) break;
         const sub = this.server.get(symbol);
         if (sub) {
           clearTimeout(sub.timer);
           sub.id = id;
+          sub.channel = channel;
           sub.state = "active";
         } else {
-          this.server.set(symbol, { id, state: "active" });
+          this.server.set(symbol, { id, channel, state: "active" });
         }
         this.log("[ws] subscribed", symbol, "count", this.server.size);
         this.reconcile();
@@ -207,9 +236,9 @@ export class WsManager {
       }
       case "data":
       case "snapshot":
-        if (msg.channel === "trades" && msg.data?.symbol) {
-          this.emit((l) => l.onTrade?.(msg.data as FugleTrade));
-        }
+        if (!msg.data?.symbol) break;
+        if (msg.channel === "trades") this.emit((l) => l.onTrade?.(msg.data as FugleTrade));
+        else if (msg.channel === "aggregates") this.emit((l) => l.onAggregate?.(msg.data as FugleQuote));
         break;
       case "error": {
         const message: string = msg.data?.message ?? "WebSocket error";
@@ -229,9 +258,10 @@ export class WsManager {
   private reconcile(): void {
     if (!this.socket || !this.authenticated) return;
 
-    // 1. Unsubscribe whatever is no longer wanted (frees slots first).
+    // 1. Unsubscribe whatever is no longer wanted, or is on the wrong channel
+    //    (frees slots first; the new channel is subscribed once the ack arrives).
     for (const [symbol, sub] of this.server) {
-      if (this.wanted.has(symbol) || sub.state !== "active") continue;
+      if (this.wanted.get(symbol) === sub.channel || sub.state !== "active") continue;
       if (!sub.id) {
         this.server.delete(symbol);
         continue;
@@ -248,12 +278,12 @@ export class WsManager {
     }
 
     // 2. Subscribe missing symbols while there is room.
-    for (const symbol of this.wanted) {
+    for (const [symbol, channel] of this.wanted) {
       if (this.server.has(symbol)) continue;
       if (this.server.size >= this.max) break;
-      const sub: ServerSub = { state: "subscribing" };
+      const sub: ServerSub = { channel, state: "subscribing" };
       this.server.set(symbol, sub);
-      this.send({ event: "subscribe", data: { channel: "trades", symbol } });
+      this.send({ event: "subscribe", data: { channel, symbol } });
       sub.timer = setTimeout(() => {
         if (this.server.get(symbol) !== sub || sub.state !== "subscribing") return;
         this.server.delete(symbol);

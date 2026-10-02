@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   CandlestickSeries,
   createChart,
+  HistogramSeries,
   LineSeries,
   type IChartApi,
   type ISeriesApi,
@@ -27,6 +28,7 @@ const error = ref<string | null>(null);
 
 let chart: IChartApi | null = null;
 let candles: ISeriesApi<"Candlestick"> | null = null;
+let volume: ISeriesApi<"Histogram"> | null = null;
 const maSeries = new Map<MaPeriod, ISeriesApi<"Line">>();
 let history: DailyBar[] = [];
 /** No older data available (reached the start of listing / Fugle's coverage). */
@@ -42,6 +44,15 @@ function mergedBars(): DailyBar[] {
   return [...history, today];
 }
 
+function volumeBar(b: DailyBar, theme = store.resolvedTheme) {
+  const { upFill, downFill } = chartColors(theme);
+  return { time: b.time, value: b.volume, color: b.close >= b.open ? upFill : downFill };
+}
+
+function drawVolume(bars: DailyBar[]) {
+  volume?.setData(bars.map((b) => volumeBar(b)));
+}
+
 function drawMa(bars: DailyBar[]) {
   const times = bars.map((b) => b.time);
   const closes = bars.map((b) => b.close);
@@ -53,6 +64,7 @@ function drawAll(range?: LogicalRange | null) {
   if (!candles || !chart) return;
   const bars = mergedBars();
   candles.setData(bars);
+  drawVolume(bars);
   drawMa(bars);
   chart.timeScale().setVisibleLogicalRange(range ?? defaultRange(bars.length));
 }
@@ -72,6 +84,7 @@ function updateToday() {
   const last = history[history.length - 1];
   if (last && last.time > today.time) return;
   candles.update(today);
+  volume?.update(volumeBar(today));
   drawMa(mergedBars());
 }
 
@@ -142,6 +155,15 @@ onMounted(async () => {
     ...candleColors(store.resolvedTheme),
     priceLineVisible: false,
   });
+  // Keep the candles clear of the MA legend at the top and the volume band at the bottom.
+  candles.priceScale().applyOptions({ scaleMargins: { top: 0.16, bottom: 0.24 } });
+  volume = chart.addSeries(HistogramSeries, {
+    priceScaleId: "vol",
+    priceFormat: { type: "volume" },
+    priceLineVisible: false,
+    lastValueVisible: false,
+  });
+  volume.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
   for (const p of MA_PERIODS) {
     maSeries.set(
       p,
@@ -178,6 +200,7 @@ watch(
   (theme) => {
     chart?.applyOptions(themedChartOptions(theme));
     candles?.applyOptions(candleColors(theme));
+    if (volume) drawVolume(mergedBars());
   },
 );
 
@@ -186,6 +209,7 @@ onBeforeUnmount(() => {
   chart?.remove();
   chart = null;
   candles = null;
+  volume = null;
   maSeries.clear();
 });
 </script>
