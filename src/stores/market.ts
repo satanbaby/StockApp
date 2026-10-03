@@ -49,15 +49,19 @@ export const useMarketStore = defineStore("market", () => {
   const systemDark = ref(darkQuery.matches);
   darkQuery.addEventListener("change", (e) => (systemDark.value = e.matches));
   const resolvedTheme = computed<"light" | "dark">(() =>
-    theme.value === "system" || theme.value === "glass" ? (systemDark.value ? "dark" : "light") : theme.value,
+    theme.value === "light" || theme.value === "dark" ? theme.value : systemDark.value ? "dark" : "light",
   );
   const glass = computed(() => theme.value === "glass");
+  const clear = computed(() => theme.value === "clear");
   watchEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = resolvedTheme.value;
     if (glass.value) root.dataset.glass = "";
     else delete root.dataset.glass;
-    // Native blur behind the (now translucent) page; off for the opaque themes.
+    if (clear.value) root.dataset.clear = "";
+    else delete root.dataset.clear;
+    // Native blur behind the (now translucent) page; off for the opaque themes and for
+    // `clear`, where the transparent window shows the desktop as-is.
     void invoke("set_glass", { tint: glass.value ? resolvedTheme.value : null }).catch(() => {});
   });
 

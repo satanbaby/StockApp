@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
 }
 .empty {
   border: 1px dashed var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   padding: 14px;
   text-align: center;
   font-size: 12px;

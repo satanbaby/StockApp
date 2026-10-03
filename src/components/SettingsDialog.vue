@@ -15,6 +15,7 @@ const THEMES: { value: ThemeSetting; label: string }[] = [
   { value: "light", label: "☀ 淺色" },
   { value: "dark", label: "🌙 深色" },
   { value: "glass", label: "毛玻璃" },
+  { value: "clear", label: "透明玻璃" },
 ];
 
 watch(

@@ -18,15 +18,17 @@ const statusText = computed(
     })[store.status],
 );
 
-/** Title-bar theme button: light → dark → glass → light. "System" joins the cycle at what it currently shows. */
+/** Title-bar theme button: light → dark → glass → clear → light. "System" joins the cycle at what it currently shows. */
 const THEME_CYCLE = [
   { value: "light", icon: "☀", label: "淺色" },
   { value: "dark", icon: "🌙", label: "深色" },
   { value: "glass", icon: "◐", label: "毛玻璃" },
+  { value: "clear", icon: "◌", label: "透明玻璃" },
 ] as const;
 const themeIndex = computed(() => {
   const current = store.theme === "system" ? store.resolvedTheme : store.theme;
-  return THEME_CYCLE.findIndex((t) => t.value === current);
+  // Unknown values (e.g. a theme from another version) fall back to the first entry.
+  return Math.max(0, THEME_CYCLE.findIndex((t) => t.value === current));
 });
 const currentTheme = computed(() => THEME_CYCLE[themeIndex.value]);
 const nextTheme = computed(() => THEME_CYCLE[(themeIndex.value + 1) % THEME_CYCLE.length]);
@@ -95,9 +97,12 @@ function submit() {
   box-sizing: border-box;
   background: var(--card);
   border: 1px solid var(--border);
+  border-top-color: var(--card-edge-top, var(--border));
   color: var(--text);
+  background-image: var(--card-sheen);
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
+  box-shadow: var(--card-shadow);
   font-size: 13px;
   outline: none;
 }

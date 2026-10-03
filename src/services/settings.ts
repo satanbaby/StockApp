@@ -2,8 +2,13 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import type { MaPeriod } from "../indicators/ma";
 import { isMac } from "../utils/platform";
 
-/** `glass`: translucent frosted-glass panel; light / dark follows the system. */
-export type ThemeSetting = "system" | "light" | "dark" | "glass";
+/**
+ * `glass`: translucent frosted-glass panel; `clear`: almost fully transparent, no blur.
+ * Both follow the system for light / dark.
+ */
+export type ThemeSetting = "system" | "light" | "dark" | "glass" | "clear";
+
+const THEMES: readonly ThemeSetting[] = ["system", "light", "dark", "glass", "clear"];
 
 export interface AppSettings {
   apiKey: string;
@@ -40,6 +45,7 @@ export async function loadSettings(): Promise<AppSettings> {
   }
   result.maVisible = { ...DEFAULT_SETTINGS.maVisible, ...result.maVisible };
   result.pinned = Array.isArray(result.pinned) ? result.pinned.slice(0, 4) : [];
+  if (!THEMES.includes(result.theme)) result.theme = DEFAULT_SETTINGS.theme;
   return result;
 }
 

@@ -11,6 +11,10 @@
   --down: #2fb35a;
   --flat: #9aa0a6;
   --surface: var(--bg);
+  --radius-card: 10px;
+  --radius-control: 8px;
+  --card-sheen: none;
+  --card-shadow: none;
   color-scheme: dark;
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
   font-size: 14px;
@@ -47,6 +51,41 @@
   --border: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.18);
   --surface: #ffffff;
+}
+/* Clear glass, styled after Liquid Glass: no blur, the (transparent) window shows
+   the desktop as-is. Cards read as glass wells pressed into the panel - the fill
+   stays clear while a dark gradient shades the edges (deepest along the top, where
+   the rim blocks the light), a light lip catches the bottom edge, and there is no
+   drop shadow. Text is black (charts keep their own palette) with a
+   white halo, and dialogs use an opaque white --surface. The background keeps a
+   trace of alpha so the panel still takes clicks. */
+:root[data-clear] {
+  --bg: rgba(255, 255, 255, 0.15);
+  --card: rgba(255, 255, 255, 0.3);
+  --border: rgba(255, 255, 255, 0.45);
+  --border-strong: rgba(255, 255, 255, 0.85);
+  --card-edge-top: rgba(0, 0, 0, 0.35);
+  --text: #000000;
+  --muted: #2f343b;
+  --up: #c8102e;
+  --down: #0b7a35;
+  --flat: #3c424b;
+  --surface: #ffffff;
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --card-sheen: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0) 32%);
+  --card-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.32), inset 0 0 16px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 rgba(255, 255, 255, 0.4);
+  --text-halo: 0 0 2px rgba(255, 255, 255, 0.95), 0 0 6px rgba(255, 255, 255, 0.75);
+  color-scheme: light;
+}
+:root[data-clear] body {
+  text-shadow: var(--text-halo);
+  font-weight: 600;
+}
+:root[data-clear] .dialog {
+  text-shadow: none;
+  font-weight: normal;
 }
 html,
 body {

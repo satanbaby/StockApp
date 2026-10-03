@@ -113,8 +113,11 @@ function onKey(e: KeyboardEvent) {
 <style scoped>
 .card {
   background: var(--card);
+  background-image: var(--card-sheen);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-top-color: var(--card-edge-top, var(--border));
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
   padding: 8px 10px 6px;
   outline: none;
   transition: border-color 0.15s;
@@ -124,7 +127,7 @@ function onKey(e: KeyboardEvent) {
 }
 .card:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: var(--card-shadow), 0 0 0 1px var(--accent);
 }
 .card.dynamic {
   border-style: dashed;
