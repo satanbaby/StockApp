@@ -164,8 +164,7 @@ onMounted(async () => {
     ...candleColors(store.resolvedTheme),
     priceLineVisible: false,
   });
-  // Keep the candles clear of the MA legend at the top and the volume band at the bottom.
-  candles.priceScale().applyOptions({ scaleMargins: { top: 0.16, bottom: 0.24 } });
+  // Candles keep the default margins; the translucent volume band overlaps their bottom fifth.
   volume = chart.addSeries(HistogramSeries, {
     priceScaleId: "vol",
     priceFormat: { type: "volume" },

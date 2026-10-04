@@ -73,6 +73,7 @@ function onKey(e: KeyboardEvent) {
       <span class="price">{{ fmtPrice(stock.price) }}</span>
       <span class="chg">{{ fmtSigned(stock.change) }}</span>
       <span class="chg">{{ fmtSigned(stock.changePercent, "%") }}</span>
+      <MaToggles v-if="mode === 'kline' && !stock.error && !stock.loading" class="ma-toggles" />
     </div>
 
     <div class="chart-area">
@@ -90,8 +91,6 @@ function onKey(e: KeyboardEvent) {
         />
         <KLineChart v-else-if="mode === 'kline'" :symbol="symbol" :revision="stock.revision" />
         <DepthPanel v-else-if="mode === 'chips'" :depth="stock.depth" :reference-price="stock.referencePrice" />
-        <!-- MA legend overlays the K-line's top-left corner. -->
-        <MaToggles v-if="mode === 'kline'" class="legend" />
       </template>
       <div v-if="mode !== 'chips'" class="hint">
         <span>{{ mode === "kline" ? "← 即時走勢" : "" }}</span>
@@ -169,8 +168,9 @@ function onKey(e: KeyboardEvent) {
 }
 .quote {
   display: flex;
+  flex-wrap: wrap; /* safety net: MA toggles drop to their own line rather than overflow */
   align-items: baseline;
-  gap: 10px;
+  gap: 0 10px;
   margin: 2px 0 4px;
   font-variant-numeric: tabular-nums;
 }
@@ -180,6 +180,10 @@ function onKey(e: KeyboardEvent) {
 }
 .chg {
   font-size: 13px;
+}
+.ma-toggles {
+  margin-left: auto;
+  align-self: center;
 }
 .up .price,
 .up .chg {
@@ -208,12 +212,6 @@ function onKey(e: KeyboardEvent) {
 }
 .state.error {
   color: var(--up);
-}
-.legend {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
 }
 .hint {
   position: absolute;

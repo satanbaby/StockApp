@@ -6,10 +6,12 @@ const store = useMarketStore();
 </script>
 
 <template>
+  <!-- Compact "MA ☑5 ☑10 ☑20 ☑60" so it fits beside a 4-digit quote in the 400px window. -->
   <div class="ma">
-    <label v-for="p in MA_PERIODS" :key="p" :style="{ color: MA_COLORS[p] }">
+    <span class="prefix">MA</span>
+    <label v-for="p in MA_PERIODS" :key="p" :style="{ color: MA_COLORS[p] }" :title="`MA${p}`">
       <input type="checkbox" tabindex="-1" :checked="store.maVisible[p]" @change="store.toggleMa(p)" />
-      MA{{ p }}
+      {{ p }}
     </label>
   </div>
 </template>
@@ -17,9 +19,13 @@ const store = useMarketStore();
 <style scoped>
 .ma {
   display: flex;
+  align-items: center;
   gap: 6px;
   font-size: 10px;
   line-height: 14px;
+}
+.prefix {
+  color: var(--muted);
 }
 label {
   display: flex;
