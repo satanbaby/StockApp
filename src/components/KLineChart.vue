@@ -44,6 +44,15 @@ function mergedBars(): DailyBar[] {
   return [...history, today];
 }
 
+/**
+ * lightweight-charts rewrites a string `time` into a `{ year, month, day }` object in
+ * place, so it must only ever see copies; the originals are shared with the history
+ * cache and the store's today bar, and the string compares in mergedBars rely on them.
+ */
+function candleBar(b: DailyBar): DailyBar {
+  return { ...b };
+}
+
 function volumeBar(b: DailyBar, theme = store.resolvedTheme) {
   const { upFill, downFill } = chartColors(theme);
   return { time: b.time, value: b.volume, color: b.close >= b.open ? upFill : downFill };
@@ -63,7 +72,7 @@ function drawMa(bars: DailyBar[]) {
 function drawAll(range?: LogicalRange | null) {
   if (!candles || !chart) return;
   const bars = mergedBars();
-  candles.setData(bars);
+  candles.setData(bars.map(candleBar));
   drawVolume(bars);
   drawMa(bars);
   chart.timeScale().setVisibleLogicalRange(range ?? defaultRange(bars.length));
@@ -83,7 +92,7 @@ function updateToday() {
   if (!today) return;
   const last = history[history.length - 1];
   if (last && last.time > today.time) return;
-  candles.update(today);
+  candles.update(candleBar(today));
   volume?.update(volumeBar(today));
   drawMa(mergedBars());
 }
